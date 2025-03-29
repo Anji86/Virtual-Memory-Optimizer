@@ -1,0 +1,99 @@
+import random
+import collections
+
+class VirtualMemory:
+    def __init__(self, capacity):
+        self.capacity = capacity
+        self.page_faults = 0
+    
+    def fifo(self, pages):
+        queue = collections.deque()
+        self.page_faults = 0
+        for page in pages:
+            if page not in queue:
+                if len(queue) >= self.capacity:
+                    queue.popleft()
+                queue.append(page)
+                self.page_faults += 1
+        return self.page_faults
+    
+    def lru(self, pages):
+        queue = []
+        self.page_faults = 0
+        for page in pages:
+            if page in queue:
+                queue.remove(page)
+            elif len(queue) >= self.capacity:
+                queue.pop(0)
+                self.page_faults += 1
+            queue.append(page)
+        return self.page_faults
+    
+    def optimal(self, pages):
+        memory = []
+        self.page_faults = 0
+        for i in range(len(pages)):
+            if pages[i] not in memory:
+                if len(memory) < self.capacity:
+                    memory.append(pages[i])
+                else:
+                    future = pages[i+1:]
+                    farthest = -1
+                    index = -1
+                    for mem_page in memory:
+                        if mem_page not in future:
+                            index = memory.index(mem_page)
+                            break
+                        else:
+                            idx = future.index(mem_page)
+                            if idx > farthest:
+                                farthest = idx
+                                index = memory.index(mem_page)
+                    memory[index] = pages[i]
+                self.page_faults += 1
+        return self.page_faults
+
+    def enhanced_lru(self, pages):
+        page_table = {}
+        access_order = []
+        self.page_faults = 0
+        for page in pages:
+            if page in page_table:
+                access_order.remove(page)
+            else:
+                if len(page_table) >= self.capacity:
+                    removed = access_order.pop(0)
+                    del page_table[removed]
+                    self.page_faults += 1
+                page_table[page] = True
+            access_order.append(page)
+        return self.page_faults
+    
+    def second_chance(self, pages):
+        queue = collections.deque()
+        reference_bits = {}
+        self.page_faults = 0
+        for page in pages:
+            if page in queue:
+                reference_bits[page] = 1
+            else:
+                while len(queue) >= self.capacity and reference_bits[queue[0]] == 1:
+                    reference_bits[queue[0]] = 0
+                    queue.rotate(-1)
+                if len(queue) >= self.capacity:
+                    removed = queue.popleft()
+                    del reference_bits[removed]
+                queue.append(page)
+                reference_bits[page] = 1
+                self.page_faults += 1
+        return self.page_faults
+
+if __name__ == "__main__":
+    pages = [random.randint(1, 10) for _ in range(30)]
+    vm = VirtualMemory(capacity=5)
+    print(f"Page Reference String: {pages}")
+    print(f"FIFO Page Faults: {vm.fifo(pages)}")
+    print(f"LRU Page Faults: {vm.lru(pages)}")
+    print(f"Optimal Page Faults: {vm.optimal(pages)}")
+    print(f"Enhanced LRU Page Faults: {vm.enhanced_lru(pages)}")
+    print(f"Second Chance Page Faults: {vm.second_chance(pages)}")
